@@ -1,0 +1,25 @@
+jwt:
+  secret: ${JWT_SECRET_KEY}
+
+server:
+  port: 8080
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://localhost:5432/postgres
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+        default_batch_fetch_size: 100
+
+
+
+
