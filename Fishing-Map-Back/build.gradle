@@ -26,13 +26,13 @@ dependencies {
 
 	// === Database ===
 	implementation 'org.postgresql:postgresql:42.5.1'
-
+/*
 	// MongoDB 연동을 위한 스타터
 	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
 	// WebSocket 및 STOMP 메시징을 위한 스타터
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
-
+*/
 	// === Lombok ===
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
