@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -26,4 +27,11 @@ public class FishSpecies extends BaseTimeEntity {
 
     @Column(length = 100)
     private String scientificName;
+
+    @Builder
+    private FishSpecies(String name, String scientificName) {
+        this.name = name;
+        this.scientificName = scientificName;
+    }
+    
 }
