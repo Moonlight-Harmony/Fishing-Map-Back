@@ -1,4 +1,4 @@
-package com.moonlightharmony.fishingmapback.fishing_record;
+package com.moonlightharmony.fishingmapback.fishing_record.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -81,7 +81,7 @@ public class FishingRecord extends BaseTimeEntity {
             String region3DeptName,
             String comment,
             Visibility visibility,
-            LocalDateTime caughAt
+            LocalDateTime caughtAt
     ) {
         this.user = user;
         this.fishSpecies = fishSpecies;
@@ -92,7 +92,7 @@ public class FishingRecord extends BaseTimeEntity {
         this.region3DeptName = region3DeptName;
         this.comment = comment;
         this.visibility = visibility;
-        this.caughtAt = caughAt;
+        this.caughtAt = caughtAt;
 
     }
 }
