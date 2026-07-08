@@ -4,6 +4,7 @@ import com.moonlightharmony.fishingmapback.filter.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -39,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         // ✅ 이 줄을 추가하세요! WebSocket 연결 엔드포인트를 허용해줍니다.
                         .requestMatchers("/ws-chat/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users/signup", "/api/auth/login").anonymous()
                         .anyRequest().authenticated()             // 나머지는 인증 필요
                 )
 
