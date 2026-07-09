@@ -13,7 +13,6 @@ import com.moonlightharmony.fishingmapback.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
-@Component
 @RequiredArgsConstructor
 public class LocalFileStore implements FileStore {
     

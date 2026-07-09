@@ -22,7 +22,7 @@ class FileStoragePropertiesBindingTest {
                         "file.fishing-record-image=image/fishing_record"
                 )
                 .run(context -> {
-                    FIleStorageProperties properties = context.getBean(FIleStorageProperties.class);
+                    FileStorageProperties properties = context.getBean(FileStorageProperties.class);
 
                     Assertions.assertThat(properties.getBaseDomain()).isEqualTo("http://localhost:8080");
                     Assertions.assertThat(properties.getBasePath()).isEqualTo("./uploads");

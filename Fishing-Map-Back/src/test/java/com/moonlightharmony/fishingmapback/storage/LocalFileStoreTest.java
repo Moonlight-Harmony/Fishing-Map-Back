@@ -20,7 +20,7 @@ class LocalFileStoreTest {
 
     @BeforeEach
     void setUp() {
-        FIleStorageProperties p = new FIleStorageProperties();
+        FileStorageProperties p = new FileStorageProperties();
         p.setBasePath(tempDir.toString());
         p.setBaseDomain("http://localhost:8080");
         p.setBaseUrl("/files");

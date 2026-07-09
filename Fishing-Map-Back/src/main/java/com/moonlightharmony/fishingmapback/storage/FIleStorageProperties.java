@@ -9,10 +9,10 @@ import lombok.Setter;
 @ConfigurationProperties(prefix = "file")
 @Getter
 @Setter
-public class FIleStorageProperties {
+public class FileStorageProperties {
     private String baseDomain;
     private String basePath;
     private String baseUrl;
-    private String FishSpeciesImage;
-    private String FishingRecordImage;
+    private String fishSpeciesImage;
+    private String fishingRecordImage;
 }

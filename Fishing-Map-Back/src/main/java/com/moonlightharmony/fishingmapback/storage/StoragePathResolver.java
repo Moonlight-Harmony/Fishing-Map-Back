@@ -6,11 +6,10 @@ import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 
-@Component
 @RequiredArgsConstructor
 public class StoragePathResolver {
     
-    private final FIleStorageProperties properties;
+    private final FileStorageProperties properties;
 
     private String subPath(StorageLocation location) {
         return switch (location) {

@@ -12,7 +12,7 @@ class StoragePathResolverTest {
 
     @BeforeEach
     void setUp() {
-        FIleStorageProperties p = new FIleStorageProperties();
+        FileStorageProperties p = new FileStorageProperties();
         p.setBasePath("./uploads");
         p.setBaseDomain("http://localhost:8080");
         p.setBaseUrl("/files");
