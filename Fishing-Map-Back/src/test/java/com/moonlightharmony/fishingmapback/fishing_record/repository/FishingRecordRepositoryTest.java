@@ -1,19 +1,20 @@
 package com.moonlightharmony.fishingmapback.fishing_record.repository;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-
-import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-
 import com.moonlightharmony.fishingmapback.fish_species.entity.FishSpecies;
 import com.moonlightharmony.fishingmapback.fish_species.repository.FishSpeciesRepository;
 import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecord;
 import com.moonlightharmony.fishingmapback.user.entity.User;
 import com.moonlightharmony.fishingmapback.user.repository.UserRepository;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 class FishingRecordRepositoryTest {
@@ -28,7 +29,8 @@ class FishingRecordRepositoryTest {
     FishSpeciesRepository fishSpeciesRepository;
 
     @Test
-    void 어종아이디로_낚시기록을_찾을수있다() {
+    @DisplayName("어종아이디로_낚시기록을_찾을수있다")
+    void findByLogWithSpeciesId() {
         User user = userRepository.save(createUser());
         FishSpecies fishSpecies = fishSpeciesRepository.save(createFishSpecies("우럭"));
         FishSpecies otherFishSpecies = fishSpeciesRepository.save(createFishSpecies("감성돔"));
@@ -38,9 +40,9 @@ class FishingRecordRepositoryTest {
 
         List<FishingRecord> fishingRecords = fishingRecordRepository.findByFishSpeciesId(fishSpecies.getId());
 
-        Assertions.assertThat(fishingRecords).hasSize(1);
-        Assertions.assertThat(fishingRecords.get(0).getId()).isEqualTo(fishingRecord.getId());
-        Assertions.assertThat(fishingRecords.get(0).getFishSpecies().getId()).isEqualTo(fishSpecies.getId());
+        assertThat(fishingRecords).hasSize(1);
+        assertThat(fishingRecords.get(0).getId()).isEqualTo(fishingRecord.getId());
+        assertThat(fishingRecords.get(0).getFishSpecies().getId()).isEqualTo(fishSpecies.getId());
     }
 
     private User createUser() {
