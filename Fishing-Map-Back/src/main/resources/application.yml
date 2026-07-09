@@ -20,6 +20,13 @@ spring:
         format_sql: true
         default_batch_fetch_size: 100
 
+file:
+  base-domain: ${FILE_BASE_DOMAIN:http://localhost:8080}
+  base-path: ${FILE_BASE_PATH:./uploads}
+  base-url: ${FILE_BASE_URL:/files}
+  fish-species-image: image/fish_species
+  fishing-record-image: image/fishing_record
+
 
 
 
