@@ -21,6 +21,7 @@ import com.moonlightharmony.fishingmapback.fish_species.entity.FishSpecies;
 import com.moonlightharmony.fishingmapback.fish_species.repository.FishSpeciesRepository;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.CreateFishingRecordRequest;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordMarkerResponse;
+import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordSummaryResponse;
 import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecord;
 import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecordImage;
 import com.moonlightharmony.fishingmapback.fishing_record.repository.FishingRecordImageRepository;
@@ -148,6 +149,40 @@ class FishingRecordServiceTest {
                 .containsExactlyInAnyOrder(record1.getId(), record2.getId());
     }
 
+    @Test
+    @DisplayName("낙시기록_요약_조회_성공")
+    void get_summary_success() {
+        User user = userRepository.save(createUser());
+        FishSpecies fish = fishSpeciesRepository.save(createFishSpecies("fish"));
+
+        FishingRecord record = fishingRecordRepository.save(
+                createFishingRecord(user, fish, "34.516517", "127.244330"));
+
+        FishingRecordImage thumbnail = fishingRecordImageRepository.save(
+                FishingRecordImage.builder()
+                        .fishingRecord(record)
+                        .storedFilename("thumb.jpg")
+                        .displayOrder(0)
+                        .build()
+        );
+
+        FishingRecordSummaryResponse summary = fishingRecordService.getSummary(record.getId());
+        Assertions.assertThat(summary.id()).isEqualTo(record.getId());
+        Assertions.assertThat(summary.fishSpeciesName()).isEqualTo("fish");
+        Assertions.assertThat(summary.caughtAt())
+                .isEqualTo(LocalDateTime.of(2026, 7, 7, 18, 30));
+        Assertions.assertThat(summary.region1DeptName()).isEqualTo("전남광주");
+        Assertions.assertThat(summary.region2DeptName()).isEqualTo("고흥군");
+        Assertions.assertThat(summary.region3DeptName()).isEqualTo("풍양면");
+        Assertions.assertThat(summary.nickname()).isEqualTo("tester");
+        Assertions.assertThat(summary.thumbnailImageUrl()).isEqualTo(
+                storagePathResolver.resolveAccessUrl(
+                        StorageLocation.FISHING_RECORD_IMAGE,
+                        thumbnail.getStoredFilename()
+                )
+        );
+    }
+
     private User createUser() {
         return User.builder()
                 .email("test@test.com")
@@ -182,4 +217,6 @@ class FishingRecordServiceTest {
                 .visibility(FishingRecord.Visibility.PUBLIC)
                 .build();
     }
+
+    
 }

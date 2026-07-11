@@ -11,12 +11,14 @@ import com.moonlightharmony.fishingmapback.fish_species.entity.FishSpecies;
 import com.moonlightharmony.fishingmapback.fish_species.repository.FishSpeciesRepository;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.CreateFishingRecordRequest;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordMarkerResponse;
+import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordSummaryResponse;
 import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecord;
 import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecordImage;
 import com.moonlightharmony.fishingmapback.fishing_record.repository.FishingRecordImageRepository;
 import com.moonlightharmony.fishingmapback.fishing_record.repository.FishingRecordRepository;
 import com.moonlightharmony.fishingmapback.storage.FileStore;
 import com.moonlightharmony.fishingmapback.storage.StorageLocation;
+import com.moonlightharmony.fishingmapback.storage.StoragePathResolver;
 import com.moonlightharmony.fishingmapback.user.entity.User;
 import com.moonlightharmony.fishingmapback.user.repository.UserRepository;
 
@@ -31,6 +33,7 @@ public class FishingRecordService {
     private final FishSpeciesRepository fishSpeciesRepository;
     private final FishingRecordImageRepository fishingRecordImageRepository;
     private final FileStore fileStore;
+    private final StoragePathResolver pathResolver;
 
     @Transactional
     public Long create(Long userId, CreateFishingRecordRequest request) {
@@ -78,5 +81,20 @@ public class FishingRecordService {
         List<FishingRecord> fishingRecords = fishingRecordRepository.findByFishSpeciesId(fishSpecies.getId());
 
         return fishingRecords.stream().map(FishingRecordMarkerResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public FishingRecordSummaryResponse getSummary(Long recordId) {
+        FishingRecord fishingRecord = fishingRecordRepository.findById(recordId)
+                .orElseThrow(() -> new AppException(ErrorCode.FISHING_RECORD_NOT_FOUND));
+
+        
+        FishingRecordImage thumbnailImage = fishingRecordImageRepository.findByFishingRecordIdAndDisplayOrder(recordId, 0)
+                .orElseThrow(() -> new AppException(ErrorCode.FISHING_RECORD_IMAGE_NOT_FOUND));
+
+                String thumbnailUrl = pathResolver.resolveAccessUrl(StorageLocation.FISHING_RECORD_IMAGE, thumbnailImage.getStoredFilename());
+
+        return FishingRecordSummaryResponse.from(fishingRecord, thumbnailUrl);
+        
     }
 }
