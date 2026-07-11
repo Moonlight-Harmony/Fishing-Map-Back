@@ -14,7 +14,7 @@ import com.moonlightharmony.fishingmapback.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
