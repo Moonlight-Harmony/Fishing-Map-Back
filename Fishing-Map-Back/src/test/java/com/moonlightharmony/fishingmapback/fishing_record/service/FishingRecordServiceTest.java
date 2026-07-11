@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.moonlightharmony.fishingmapback.fish_species.entity.FishSpecies;
 import com.moonlightharmony.fishingmapback.fish_species.repository.FishSpeciesRepository;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.CreateFishingRecordRequest;
+import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordMarkerResponse;
 import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecord;
 import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecordImage;
 import com.moonlightharmony.fishingmapback.fishing_record.repository.FishingRecordImageRepository;
@@ -122,6 +123,31 @@ class FishingRecordServiceTest {
         Assertions.assertThat(Files.exists(storedPath2)).isTrue();
     }
 
+    @Test
+    @DisplayName("어종명으로_마커_조회_성공")
+    void find_markers_by_fish_species_name_success() {
+        User user = userRepository.save(createUser());
+        FishSpecies fish1 = fishSpeciesRepository.save(createFishSpecies("fish1"));
+        FishSpecies fish2 = fishSpeciesRepository.save(createFishSpecies("fish2"));
+
+        FishingRecord record1 = fishingRecordRepository.save(
+                createFishingRecord(user, fish1, "34.516517", "127.244330"));
+
+        FishingRecord record2 = fishingRecordRepository.save(
+                createFishingRecord(user, fish1, "35.516517", "128.244330"));
+        
+        fishingRecordRepository.save(
+                createFishingRecord(user, fish2, "36.516517", "129.244330"));
+
+        List<FishingRecordMarkerResponse> markers =
+                fishingRecordService.findMarkersByFishSpeciesName("fish1");
+        
+        Assertions.assertThat(markers).hasSize(2);
+        Assertions.assertThat(markers)
+                .extracting(FishingRecordMarkerResponse::id)
+                .containsExactlyInAnyOrder(record1.getId(), record2.getId());
+    }
+
     private User createUser() {
         return User.builder()
                 .email("test@test.com")
@@ -139,5 +165,21 @@ class FishingRecordServiceTest {
 
     private MockMultipartFile createImage(String filename) {
         return new MockMultipartFile("images", filename, "image/jpeg", "test".getBytes());
+    }
+    
+    private FishingRecord createFishingRecord(
+                User user, FishSpecies fishSpecies, String lat, String lng) {
+        return FishingRecord.builder()
+                .user(user)
+                .fishSpecies(fishSpecies)
+                .caughtAt(LocalDateTime.of(2026, 7, 7, 18, 30))
+                .latitude(new BigDecimal(lat))
+                .longitude(new BigDecimal(lng))
+                .region1DeptName("전남광주")
+                .region2DeptName("고흥군")
+                .region3DeptName("풍양면")
+                .comment("방파제 낚시")
+                .visibility(FishingRecord.Visibility.PUBLIC)
+                .build();
     }
 }

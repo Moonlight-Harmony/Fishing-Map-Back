@@ -10,6 +10,7 @@ import com.moonlightharmony.fishingmapback.exception.ErrorCode;
 import com.moonlightharmony.fishingmapback.fish_species.entity.FishSpecies;
 import com.moonlightharmony.fishingmapback.fish_species.repository.FishSpeciesRepository;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.CreateFishingRecordRequest;
+import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordMarkerResponse;
 import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecord;
 import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecordImage;
 import com.moonlightharmony.fishingmapback.fishing_record.repository.FishingRecordImageRepository;
@@ -67,5 +68,15 @@ public class FishingRecordService {
         }
 
         return savedFishingRecord.getId();
+    }
+
+    @Transactional(readOnly = true)
+    public List<FishingRecordMarkerResponse> findMarkersByFishSpeciesName(String name) {
+        FishSpecies fishSpecies = fishSpeciesRepository.findByName(name)
+                .orElseThrow(() -> new AppException(ErrorCode.FISH_SPECIES_NOT_FOUND));
+        
+        List<FishingRecord> fishingRecords = fishingRecordRepository.findByFishSpeciesId(fishSpecies.getId());
+
+        return fishingRecords.stream().map(FishingRecordMarkerResponse::from).toList();
     }
 }
