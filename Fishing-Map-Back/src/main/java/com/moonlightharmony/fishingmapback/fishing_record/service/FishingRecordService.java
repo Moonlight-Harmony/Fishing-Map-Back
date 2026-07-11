@@ -10,6 +10,7 @@ import com.moonlightharmony.fishingmapback.exception.ErrorCode;
 import com.moonlightharmony.fishingmapback.fish_species.entity.FishSpecies;
 import com.moonlightharmony.fishingmapback.fish_species.repository.FishSpeciesRepository;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.CreateFishingRecordRequest;
+import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordDetailResponse;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordMarkerResponse;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordSummaryResponse;
 import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecord;
@@ -95,6 +96,19 @@ public class FishingRecordService {
                 String thumbnailUrl = pathResolver.resolveAccessUrl(StorageLocation.FISHING_RECORD_IMAGE, thumbnailImage.getStoredFilename());
 
         return FishingRecordSummaryResponse.from(fishingRecord, thumbnailUrl);
-        
+    }
+
+    @Transactional(readOnly = true)
+    public FishingRecordDetailResponse getDetail(Long recordId) {
+        FishingRecord fishingRecord = fishingRecordRepository.findById(recordId)
+                .orElseThrow(() -> new AppException(ErrorCode.FISHING_RECORD_NOT_FOUND));
+
+        List<FishingRecordImage> images = fishingRecordImageRepository.findByFishingRecordIdOrderByDisplayOrderAsc(recordId);
+
+        List<String> imageUrls = images.stream()
+                .map((image) -> pathResolver.resolveAccessUrl(StorageLocation.FISHING_RECORD_IMAGE, image.getStoredFilename()))
+                .toList();
+
+        return FishingRecordDetailResponse.from(fishingRecord, imageUrls);
     }
 }
