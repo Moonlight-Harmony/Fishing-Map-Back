@@ -9,7 +9,7 @@ import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecordIm
 
 public interface FishingRecordImageRepository extends JpaRepository<FishingRecordImage, Long> {
 
-    Optional<FishingRecordImage> findByFishingRecordIdInAndDisplayOrder(Long id, int displayOrder);
+    Optional<FishingRecordImage> findByFishingRecordIdAndDisplayOrder(Long id, int displayOrder);
 
     List<FishingRecordImage> findByFishingRecordIdOrderByDisplayOrderAsc(Long fishingRecordId);
 }
