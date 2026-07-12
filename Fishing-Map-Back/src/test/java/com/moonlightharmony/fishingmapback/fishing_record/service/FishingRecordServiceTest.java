@@ -1,0 +1,265 @@
+package com.moonlightharmony.fishingmapback.fishing_record.service;
+
+import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.moonlightharmony.fishingmapback.fish_species.entity.FishSpecies;
+import com.moonlightharmony.fishingmapback.fish_species.repository.FishSpeciesRepository;
+import com.moonlightharmony.fishingmapback.fishing_record.dto.CreateFishingRecordRequest;
+import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordDetailResponse;
+import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordMarkerResponse;
+import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordSummaryResponse;
+import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecord;
+import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecordImage;
+import com.moonlightharmony.fishingmapback.fishing_record.repository.FishingRecordImageRepository;
+import com.moonlightharmony.fishingmapback.fishing_record.repository.FishingRecordRepository;
+import com.moonlightharmony.fishingmapback.storage.StorageLocation;
+import com.moonlightharmony.fishingmapback.storage.StoragePathResolver;
+import com.moonlightharmony.fishingmapback.user.entity.User;
+import com.moonlightharmony.fishingmapback.user.repository.UserRepository;
+
+@SpringBootTest
+@Transactional
+class FishingRecordServiceTest {
+
+    @TempDir
+    static Path tempDir;
+
+    @Autowired
+    FishingRecordService fishingRecordService;
+
+    @Autowired
+    UserRepository userRepository;
+
+    @Autowired
+    FishSpeciesRepository fishSpeciesRepository;
+
+    @Autowired
+    FishingRecordRepository fishingRecordRepository;
+
+    @Autowired
+    FishingRecordImageRepository fishingRecordImageRepository;
+
+    @Autowired
+    StoragePathResolver storagePathResolver;
+
+    @DynamicPropertySource
+    static void registerProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url",
+                () -> "jdbc:h2:mem:fishing_record_service;MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
+        registry.add("spring.datasource.username", () -> "sa");
+        registry.add("spring.datasource.password", () -> "");
+        registry.add("spring.datasource.driver-class-name", () -> "org.h2.Driver");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        registry.add("file.base-path", () -> tempDir.toString());
+        registry.add("file.base-domain", () -> "http://localhost:8080");
+        registry.add("file.base-url", () -> "/files");
+        registry.add("file.fish-species-image", () -> "image/fish_species");
+        registry.add("file.fishing-record-image", () -> "image/fishing_record");
+        registry.add("jwt.secret",
+                () -> "test-secret-key-that-is-long-enough-for-hs256-algorithm");
+    }
+
+    @Test
+    @DisplayName("낚시기록_저장_성공")
+    void save_fishing_record_success() {
+        User user = userRepository.save(createUser());
+        FishSpecies fishSpecies = fishSpeciesRepository.save(createFishSpecies("우럭"));
+        MockMultipartFile image1 = createImage("catch1.jpg");
+        MockMultipartFile image2 = createImage("catch2.jpg");
+
+        CreateFishingRecordRequest request = new CreateFishingRecordRequest(
+                fishSpecies.getId(),
+                LocalDateTime.of(2026, 7, 7, 18, 30),
+                new BigDecimal("34.516517"),
+                new BigDecimal("127.244330"),
+                "전남광주",
+                "고흥군",
+                "풍양면",
+                "방파제 낚시",
+                FishingRecord.Visibility.PUBLIC,
+                List.of(image1, image2)
+        );
+
+        Long recordId = fishingRecordService.create(user.getId(), request);
+
+        FishingRecord saved = fishingRecordRepository.findById(recordId).orElseThrow();
+        Assertions.assertThat(saved.getUser().getId()).isEqualTo(user.getId());
+        Assertions.assertThat(saved.getFishSpecies().getId()).isEqualTo(fishSpecies.getId());
+        Assertions.assertThat(saved.getCaughtAt()).isEqualTo(LocalDateTime.of(2026, 7, 7, 18, 30));
+        Assertions.assertThat(saved.getLatitude()).isEqualByComparingTo("34.516517");
+        Assertions.assertThat(saved.getLongitude()).isEqualByComparingTo("127.244330");
+        Assertions.assertThat(saved.getRegion1DeptName()).isEqualTo("전남광주");
+        Assertions.assertThat(saved.getRegion2DeptName()).isEqualTo("고흥군");
+        Assertions.assertThat(saved.getRegion3DeptName()).isEqualTo("풍양면");
+        Assertions.assertThat(saved.getComment()).isEqualTo("방파제 낚시");
+        Assertions.assertThat(saved.getVisibility()).isEqualTo(FishingRecord.Visibility.PUBLIC);
+
+        List<FishingRecordImage> images =
+                fishingRecordImageRepository.findByFishingRecordIdOrderByDisplayOrderAsc(recordId);
+        Assertions.assertThat(images).hasSize(2);
+        Assertions.assertThat(images.get(0).getDisplayOrder()).isEqualTo(0);
+        Assertions.assertThat(images.get(1).getDisplayOrder()).isEqualTo(1);
+        Assertions.assertThat(images.get(0).getStoredFilename()).endsWith(".jpg");
+        Assertions.assertThat(images.get(1).getStoredFilename()).endsWith(".jpg");
+
+        Path storedPath1 = storagePathResolver.resolveStoragePath(
+                StorageLocation.FISHING_RECORD_IMAGE, images.get(0).getStoredFilename());
+        Path storedPath2 = storagePathResolver.resolveStoragePath(
+                StorageLocation.FISHING_RECORD_IMAGE, images.get(1).getStoredFilename());
+        Assertions.assertThat(Files.exists(storedPath1)).isTrue();
+        Assertions.assertThat(Files.exists(storedPath2)).isTrue();
+    }
+
+    @Test
+    @DisplayName("어종명으로_마커_조회_성공")
+    void find_markers_by_fish_species_name_success() {
+        User user = userRepository.save(createUser());
+        FishSpecies fish1 = fishSpeciesRepository.save(createFishSpecies("fish1"));
+        FishSpecies fish2 = fishSpeciesRepository.save(createFishSpecies("fish2"));
+
+        FishingRecord record1 = fishingRecordRepository.save(
+                createFishingRecord(user, fish1, "34.516517", "127.244330"));
+
+        FishingRecord record2 = fishingRecordRepository.save(
+                createFishingRecord(user, fish1, "35.516517", "128.244330"));
+        
+        fishingRecordRepository.save(
+                createFishingRecord(user, fish2, "36.516517", "129.244330"));
+
+        List<FishingRecordMarkerResponse> markers =
+                fishingRecordService.findMarkersByFishSpeciesName("fish1");
+        
+        Assertions.assertThat(markers).hasSize(2);
+        Assertions.assertThat(markers)
+                .extracting(FishingRecordMarkerResponse::id)
+                .containsExactlyInAnyOrder(record1.getId(), record2.getId());
+    }
+
+    @Test
+    @DisplayName("낙시기록_요약_조회_성공")
+    void get_summary_success() {
+        User user = userRepository.save(createUser());
+        FishSpecies fish = fishSpeciesRepository.save(createFishSpecies("fish"));
+
+        FishingRecord record = fishingRecordRepository.save(
+                createFishingRecord(user, fish, "34.516517", "127.244330"));
+
+        FishingRecordImage thumbnail = fishingRecordImageRepository.save(
+                FishingRecordImage.builder()
+                        .fishingRecord(record)
+                        .storedFilename("thumb.jpg")
+                        .displayOrder(0)
+                        .build()
+        );
+
+        FishingRecordSummaryResponse summary = fishingRecordService.getSummary(record.getId());
+        Assertions.assertThat(summary.id()).isEqualTo(record.getId());
+        Assertions.assertThat(summary.fishSpeciesName()).isEqualTo("fish");
+        Assertions.assertThat(summary.caughtAt())
+                .isEqualTo(LocalDateTime.of(2026, 7, 7, 18, 30));
+        Assertions.assertThat(summary.region1DeptName()).isEqualTo("전남광주");
+        Assertions.assertThat(summary.region2DeptName()).isEqualTo("고흥군");
+        Assertions.assertThat(summary.region3DeptName()).isEqualTo("풍양면");
+        Assertions.assertThat(summary.nickname()).isEqualTo("tester");
+        Assertions.assertThat(summary.thumbnailImageUrl()).isEqualTo(
+                storagePathResolver.resolveAccessUrl(
+                        StorageLocation.FISHING_RECORD_IMAGE,
+                        thumbnail.getStoredFilename()
+                )
+        );
+    }
+
+    @Test
+    @DisplayName("낚시기록_상세_조회_성공")
+    void get_detail_success() {
+        User user = userRepository.save(createUser());
+        FishSpecies fish = fishSpeciesRepository.save(createFishSpecies("우럭"));
+        FishingRecord record = fishingRecordRepository.save(
+                createFishingRecord(user, fish, "34.516517", "127.244330"));
+        FishingRecordImage image1 = fishingRecordImageRepository.save(
+                FishingRecordImage.builder()
+                        .fishingRecord(record)
+                        .storedFilename("first.jpg")
+                        .displayOrder(0)
+                        .build()
+        );
+        FishingRecordImage image2 = fishingRecordImageRepository.save(
+                FishingRecordImage.builder()
+                        .fishingRecord(record)
+                        .storedFilename("second.jpg")
+                        .displayOrder(1)
+                        .build()
+        );
+        FishingRecordDetailResponse detail = fishingRecordService.getDetail(record.getId());
+        Assertions.assertThat(detail.id()).isEqualTo(record.getId());
+        Assertions.assertThat(detail.fishSpeciesName()).isEqualTo("우럭");
+        Assertions.assertThat(detail.caughtAt())
+                .isEqualTo(LocalDateTime.of(2026, 7, 7, 18, 30));
+        Assertions.assertThat(detail.latitude()).isEqualByComparingTo("34.516517");
+        Assertions.assertThat(detail.longitude()).isEqualByComparingTo("127.244330");
+        Assertions.assertThat(detail.region1DeptName()).isEqualTo("전남광주");
+        Assertions.assertThat(detail.region2DeptName()).isEqualTo("고흥군");
+        Assertions.assertThat(detail.region3DeptName()).isEqualTo("풍양면");
+        Assertions.assertThat(detail.comment()).isEqualTo("방파제 낚시");
+        Assertions.assertThat(detail.visibility()).isEqualTo(FishingRecord.Visibility.PUBLIC);
+        Assertions.assertThat(detail.nickname()).isEqualTo("tester");
+        Assertions.assertThat(detail.imageUrls()).containsExactly(
+                storagePathResolver.resolveAccessUrl(
+                        StorageLocation.FISHING_RECORD_IMAGE, image1.getStoredFilename()),
+                storagePathResolver.resolveAccessUrl(
+                        StorageLocation.FISHING_RECORD_IMAGE, image2.getStoredFilename())
+        );
+    }
+
+    private User createUser() {
+        return User.builder()
+                .email("test@test.com")
+                .password("password")
+                .nickname("tester")
+                .build();
+    }
+
+    private FishSpecies createFishSpecies(String name) {
+        return FishSpecies.builder()
+                .name(name)
+                .scientificName("scname")
+                .build();
+    }
+
+    private MockMultipartFile createImage(String filename) {
+        return new MockMultipartFile("images", filename, "image/jpeg", "test".getBytes());
+    }
+    
+    private FishingRecord createFishingRecord(
+                User user, FishSpecies fishSpecies, String lat, String lng) {
+        return FishingRecord.builder()
+                .user(user)
+                .fishSpecies(fishSpecies)
+                .caughtAt(LocalDateTime.of(2026, 7, 7, 18, 30))
+                .latitude(new BigDecimal(lat))
+                .longitude(new BigDecimal(lng))
+                .region1DeptName("전남광주")
+                .region2DeptName("고흥군")
+                .region3DeptName("풍양면")
+                .comment("방파제 낚시")
+                .visibility(FishingRecord.Visibility.PUBLIC)
+                .build();
+    }
+
+    
+}
