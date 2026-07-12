@@ -1,5 +1,6 @@
 package com.moonlightharmony.fishingmapback.auth.service;
 
+import java.lang.reflect.Field;
 import java.util.Optional;
 
 import org.assertj.core.api.Assertions;
@@ -33,7 +34,7 @@ class AuthServiceTest {
     AuthService authService;
 
     @Test
-    void 로그인_성공() {
+    void 로그인_성공() throws Exception {
         LoginRequest request = new LoginRequest("test@test.com", "password");
 
         User user = User.builder()
@@ -41,12 +42,15 @@ class AuthServiceTest {
                 .password("encodedPassword")
                 .nickname("tester")
                 .build();
+        Field idField = User.class.getDeclaredField("id");
+        idField.setAccessible(true);
+        idField.set(user, 1L);
 
         BDDMockito.given(userRepository.findByEmail("test@test.com"))
                 .willReturn(Optional.of(user));
         BDDMockito.given(passwordEncoder.matches("password", "encodedPassword"))
                 .willReturn(true);
-        BDDMockito.given(jwtUtil.generateToken(BDDMockito.anyString()))
+        BDDMockito.given(jwtUtil.generateToken("1"))
                 .willReturn("access-token");
 
         LoginResponse response = authService.login(request);
@@ -54,5 +58,6 @@ class AuthServiceTest {
         Assertions.assertThat(response.accessToken()).isEqualTo("access-token");
         Assertions.assertThat(response.user().email()).isEqualTo("test@test.com");
         Assertions.assertThat(response.user().nickname()).isEqualTo("tester");
+        BDDMockito.verify(jwtUtil).generateToken("1");
     }
 }

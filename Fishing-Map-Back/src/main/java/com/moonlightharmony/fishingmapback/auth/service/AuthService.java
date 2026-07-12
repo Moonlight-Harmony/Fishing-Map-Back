@@ -30,7 +30,7 @@ public class AuthService {
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        String accessToken = jwtUtil.generateToken(user.getEmail());
+        String accessToken = jwtUtil.generateToken(String.valueOf(user.getId()));
 
         return new LoginResponse(accessToken, UserSummaryResponse.from(user));
     }
