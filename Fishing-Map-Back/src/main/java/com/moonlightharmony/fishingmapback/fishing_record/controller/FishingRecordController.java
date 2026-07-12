@@ -20,6 +20,7 @@ import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordMarke
 import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordSummaryResponse;
 import com.moonlightharmony.fishingmapback.fishing_record.service.FishingRecordService;
 
+import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -30,7 +31,7 @@ public class FishingRecordController {
     
     private final FishingRecordService fishingRecordService;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public CreateFishingRecordResponse create(
             @AuthenticationPrincipal String principal,
