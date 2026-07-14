@@ -66,6 +66,9 @@ public class FishingRecord extends BaseTimeEntity {
     @Column(nullable = false, length = 10)
     private Visibility visibility;
 
+    @Column
+    private LocalDateTime deletedAt;
+
     public enum Visibility {
         PUBLIC, PRIVATE
     }
@@ -93,6 +96,5 @@ public class FishingRecord extends BaseTimeEntity {
         this.comment = comment;
         this.visibility = visibility;
         this.caughtAt = caughtAt;
-
     }
 }

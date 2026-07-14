@@ -79,14 +79,14 @@ public class FishingRecordService {
         FishSpecies fishSpecies = fishSpeciesRepository.findByName(name)
                 .orElseThrow(() -> new AppException(ErrorCode.FISH_SPECIES_NOT_FOUND));
         
-        List<FishingRecord> fishingRecords = fishingRecordRepository.findByFishSpeciesId(fishSpecies.getId());
+        List<FishingRecord> fishingRecords = fishingRecordRepository.findByFishSpeciesIdAndDeletedAtIsNull(fishSpecies.getId());
 
         return fishingRecords.stream().map(FishingRecordMarkerResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
     public FishingRecordSummaryResponse getSummary(Long recordId) {
-        FishingRecord fishingRecord = fishingRecordRepository.findById(recordId)
+        FishingRecord fishingRecord = fishingRecordRepository.findByIdAndDeletedAtIsNull(recordId)
                 .orElseThrow(() -> new AppException(ErrorCode.FISHING_RECORD_NOT_FOUND));
 
         

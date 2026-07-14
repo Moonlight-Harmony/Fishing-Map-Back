@@ -36,7 +36,7 @@ class FishingRecordRepositoryTest {
         FishingRecord fishingRecord = fishingRecordRepository.save(createFishingRecord(user, fishSpecies));
         fishingRecordRepository.save(createFishingRecord(user, otherFishSpecies));
 
-        List<FishingRecord> fishingRecords = fishingRecordRepository.findByFishSpeciesId(fishSpecies.getId());
+        List<FishingRecord> fishingRecords = fishingRecordRepository.findByFishSpeciesIdAndDeletedAtIsNull(fishSpecies.getId());
 
         Assertions.assertThat(fishingRecords).hasSize(1);
         Assertions.assertThat(fishingRecords.get(0).getId()).isEqualTo(fishingRecord.getId());
