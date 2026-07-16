@@ -18,17 +18,17 @@ public record FishingRecordDetailResponse(
     String comment,
     FishingRecord.Visibility visibility,
     String nickname,
-    List<String> imageUrls
+    List<FishingRecordImageResponse> images
 ) {
     public static FishingRecordDetailResponse from(
             FishingRecord fishingRecord,
-            List<String> imageUrls
+            List<FishingRecordImageResponse> images
     ) {
         return new FishingRecordDetailResponse(
-                fishingRecord.getId(), 
+                fishingRecord.getId(),
                 fishingRecord.getFishSpecies().getName(),
                 fishingRecord.getCaughtAt(),
-                fishingRecord.getLatitude(), 
+                fishingRecord.getLatitude(),
                 fishingRecord.getLongitude(),
                 fishingRecord.getRegion1DeptName(),
                 fishingRecord.getRegion2DeptName(),
@@ -36,7 +36,7 @@ public record FishingRecordDetailResponse(
                 fishingRecord.getComment(),
                 fishingRecord.getVisibility(),
                 fishingRecord.getUser().getNickname(),
-                imageUrls
+                images
         );
     }
 }

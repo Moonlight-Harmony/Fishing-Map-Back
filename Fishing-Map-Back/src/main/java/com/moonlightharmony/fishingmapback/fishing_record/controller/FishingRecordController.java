@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -19,6 +20,7 @@ import com.moonlightharmony.fishingmapback.fishing_record.dto.CreateFishingRecor
 import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordDetailResponse;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordMarkerResponse;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordSummaryResponse;
+import com.moonlightharmony.fishingmapback.fishing_record.dto.UpdateFishingRecordRequest;
 import com.moonlightharmony.fishingmapback.fishing_record.service.FishingRecordService;
 
 import org.springframework.http.MediaType;
@@ -62,6 +64,17 @@ public class FishingRecordController {
     @ResponseStatus(HttpStatus.OK)
     public FishingRecordDetailResponse getDetail(@PathVariable Long recordId) {
         return fishingRecordService.getDetail(recordId);
+    }
+
+    @PutMapping(value = "/{recordId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void update(
+            @AuthenticationPrincipal String principal,
+            @PathVariable Long recordId,
+            @Valid @ModelAttribute UpdateFishingRecordRequest request
+    ) {
+        Long userId = Long.valueOf(principal);
+        fishingRecordService.update(userId, recordId, request);
     }
 
     @DeleteMapping("/{recordId}")

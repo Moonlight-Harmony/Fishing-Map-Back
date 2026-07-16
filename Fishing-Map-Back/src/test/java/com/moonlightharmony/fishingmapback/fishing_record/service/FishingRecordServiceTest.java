@@ -25,6 +25,7 @@ import com.moonlightharmony.fishingmapback.fishing_record.dto.CreateFishingRecor
 import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordDetailResponse;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordMarkerResponse;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.FishingRecordSummaryResponse;
+import com.moonlightharmony.fishingmapback.fishing_record.dto.UpdateFishingRecordRequest;
 import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecord;
 import com.moonlightharmony.fishingmapback.fishing_record.entity.FishingRecordImage;
 import com.moonlightharmony.fishingmapback.fishing_record.repository.FishingRecordImageRepository;
@@ -220,12 +221,15 @@ class FishingRecordServiceTest {
         Assertions.assertThat(detail.comment()).isEqualTo("방파제 낚시");
         Assertions.assertThat(detail.visibility()).isEqualTo(FishingRecord.Visibility.PUBLIC);
         Assertions.assertThat(detail.nickname()).isEqualTo("tester");
-        Assertions.assertThat(detail.imageUrls()).containsExactly(
+        Assertions.assertThat(detail.images()).hasSize(2);
+        Assertions.assertThat(detail.images().get(0).id()).isEqualTo(image1.getId());
+        Assertions.assertThat(detail.images().get(0).url()).isEqualTo(
                 storagePathResolver.resolveAccessUrl(
-                        StorageLocation.FISHING_RECORD_IMAGE, image1.getStoredFilename()),
+                        StorageLocation.FISHING_RECORD_IMAGE, image1.getStoredFilename()));
+        Assertions.assertThat(detail.images().get(1).id()).isEqualTo(image2.getId());
+        Assertions.assertThat(detail.images().get(1).url()).isEqualTo(
                 storagePathResolver.resolveAccessUrl(
-                        StorageLocation.FISHING_RECORD_IMAGE, image2.getStoredFilename())
-        );
+                        StorageLocation.FISHING_RECORD_IMAGE, image2.getStoredFilename()));
     }
 
     private User createUser() {
@@ -320,5 +324,153 @@ class FishingRecordServiceTest {
                 .isInstanceOf(AppException.class)
                 .extracting(e -> ((AppException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FORBIDDEN);
+    }
+
+    @Test
+    @DisplayName("낚시기록_수정_성공_필드_및_이미지_최종순서")
+    void update_success() {
+        User user = userRepository.save(createUser());
+        FishSpecies fish1 = fishSpeciesRepository.save(createFishSpecies("우럭"));
+        FishSpecies fish2 = fishSpeciesRepository.save(createFishSpecies("감성돔"));
+
+        Long recordId = fishingRecordService.create(
+                user.getId(),
+                new CreateFishingRecordRequest(
+                        fish1.getId(),
+                        LocalDateTime.of(2026, 7, 7, 18, 30),
+                        new BigDecimal("34.516517"),
+                        new BigDecimal("127.244330"),
+                        "전남광주",
+                        "고흥군",
+                        "풍양면",
+                        "방파제 낚시",
+                        FishingRecord.Visibility.PUBLIC,
+                        List.of(createImage("catch1.jpg"), createImage("catch2.jpg"))
+                )
+        );
+
+        List<FishingRecordImage> before =
+                fishingRecordImageRepository.findByFishingRecordIdOrderByDisplayOrderAsc(recordId);
+        Long keepImageId = before.get(1).getId();
+        String deletedFilename = before.get(0).getStoredFilename();
+        Path deletedPath = storagePathResolver.resolveStoragePath(
+                StorageLocation.FISHING_RECORD_IMAGE, deletedFilename);
+
+        fishingRecordService.update(
+                user.getId(),
+                recordId,
+                new UpdateFishingRecordRequest(
+                        fish2.getId(),
+                        LocalDateTime.of(2026, 8, 1, 9, 0),
+                        new BigDecimal("35.000000"),
+                        new BigDecimal("129.000000"),
+                        "부산",
+                        "해운대구",
+                        "우동",
+                        "수정된 코멘트",
+                        FishingRecord.Visibility.PRIVATE,
+                        List.of("", String.valueOf(keepImageId)),
+                        List.of(createImage("catch3.jpg"))
+                )
+        );
+
+        FishingRecord updated = fishingRecordRepository.findById(recordId).orElseThrow();
+        Assertions.assertThat(updated.getFishSpecies().getId()).isEqualTo(fish2.getId());
+        Assertions.assertThat(updated.getCaughtAt()).isEqualTo(LocalDateTime.of(2026, 8, 1, 9, 0));
+        Assertions.assertThat(updated.getLatitude()).isEqualByComparingTo("35.000000");
+        Assertions.assertThat(updated.getLongitude()).isEqualByComparingTo("129.000000");
+        Assertions.assertThat(updated.getRegion1DeptName()).isEqualTo("부산");
+        Assertions.assertThat(updated.getRegion2DeptName()).isEqualTo("해운대구");
+        Assertions.assertThat(updated.getRegion3DeptName()).isEqualTo("우동");
+        Assertions.assertThat(updated.getComment()).isEqualTo("수정된 코멘트");
+        Assertions.assertThat(updated.getVisibility()).isEqualTo(FishingRecord.Visibility.PRIVATE);
+
+        List<FishingRecordImage> after =
+                fishingRecordImageRepository.findByFishingRecordIdOrderByDisplayOrderAsc(recordId);
+        Assertions.assertThat(after).hasSize(2);
+        Assertions.assertThat(after.get(0).getDisplayOrder()).isEqualTo(0);
+        Assertions.assertThat(after.get(0).getStoredFilename()).endsWith(".jpg");
+        Assertions.assertThat(after.get(1).getId()).isEqualTo(keepImageId);
+        Assertions.assertThat(after.get(1).getDisplayOrder()).isEqualTo(1);
+        Assertions.assertThat(Files.exists(deletedPath)).isFalse();
+    }
+
+    @Test
+    @DisplayName("낚시기록_수정_실패_권한없음")
+    void update_fail_forbidden() {
+        User owner = userRepository.save(createUser());
+        User other = userRepository.save(User.builder()
+                .email("other@test.com")
+                .password("password")
+                .nickname("other")
+                .build());
+        FishSpecies fish = fishSpeciesRepository.save(createFishSpecies("우럭"));
+        FishingRecord record = fishingRecordRepository.save(
+                createFishingRecord(owner, fish, "34.516517", "127.244330"));
+
+        Assertions.assertThatThrownBy(() -> fishingRecordService.update(
+                        other.getId(),
+                        record.getId(),
+                        new UpdateFishingRecordRequest(
+                                fish.getId(),
+                                LocalDateTime.of(2026, 8, 1, 9, 0),
+                                new BigDecimal("35.000000"),
+                                new BigDecimal("129.000000"),
+                                "부산",
+                                "해운대구",
+                                "우동",
+                                "수정",
+                                FishingRecord.Visibility.PRIVATE,
+                                List.of(),
+                                List.of()
+                        )))
+                .isInstanceOf(AppException.class)
+                .extracting(e -> ((AppException) e).getErrorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN);
+    }
+
+    @Test
+    @DisplayName("낚시기록_수정_실패_이미지슬롯과_신규파일_개수불일치")
+    void update_fail_image_slot_mismatch() {
+        User user = userRepository.save(createUser());
+        FishSpecies fish = fishSpeciesRepository.save(createFishSpecies("우럭"));
+        Long recordId = fishingRecordService.create(
+                user.getId(),
+                new CreateFishingRecordRequest(
+                        fish.getId(),
+                        LocalDateTime.of(2026, 7, 7, 18, 30),
+                        new BigDecimal("34.516517"),
+                        new BigDecimal("127.244330"),
+                        "전남광주",
+                        "고흥군",
+                        "풍양면",
+                        "방파제 낚시",
+                        FishingRecord.Visibility.PUBLIC,
+                        List.of(createImage("catch1.jpg"))
+                )
+        );
+        FishingRecordImage kept =
+                fishingRecordImageRepository.findByFishingRecordIdOrderByDisplayOrderAsc(recordId)
+                        .get(0);
+
+        Assertions.assertThatThrownBy(() -> fishingRecordService.update(
+                        user.getId(),
+                        recordId,
+                        new UpdateFishingRecordRequest(
+                                fish.getId(),
+                                LocalDateTime.of(2026, 8, 1, 9, 0),
+                                new BigDecimal("35.000000"),
+                                new BigDecimal("129.000000"),
+                                "부산",
+                                "해운대구",
+                                "우동",
+                                "수정",
+                                FishingRecord.Visibility.PRIVATE,
+                                List.of(String.valueOf(kept.getId()), ""),
+                                List.of()
+                        )))
+                .isInstanceOf(AppException.class)
+                .extracting(e -> ((AppException) e).getErrorCode())
+                .isEqualTo(ErrorCode.BAD_REQUEST);
     }
 }

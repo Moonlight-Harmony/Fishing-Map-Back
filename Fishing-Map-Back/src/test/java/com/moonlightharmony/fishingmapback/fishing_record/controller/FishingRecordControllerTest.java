@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
@@ -200,9 +201,11 @@ class FishingRecordControllerTest {
                 .andExpect(jsonPath("$.comment").value("방파제 낚시"))
                 .andExpect(jsonPath("$.visibility").value("PUBLIC"))
                 .andExpect(jsonPath("$.nickname").value("tester"))
-                .andExpect(jsonPath("$.imageUrls.length()").value(2))
-                .andExpect(jsonPath("$.imageUrls[0]").value(url1))
-                .andExpect(jsonPath("$.imageUrls[1]").value(url2));
+                .andExpect(jsonPath("$.images.length()").value(2))
+                .andExpect(jsonPath("$.images[0].id").value(image1.getId()))
+                .andExpect(jsonPath("$.images[0].url").value(url1))
+                .andExpect(jsonPath("$.images[1].id").value(image2.getId()))
+                .andExpect(jsonPath("$.images[1].url").value(url2));
     }
 
     @Test
@@ -252,6 +255,75 @@ class FishingRecordControllerTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("접근 권한이 없습니다."));
+    }
+
+    @Test
+    @DisplayName("낚시기록_수정_성공")
+    void update_success() throws Exception {
+        User user = userRepository.save(createUser());
+        FishSpecies fish1 = fishSpeciesRepository.save(createFishSpecies("우럭"));
+        FishSpecies fish2 = fishSpeciesRepository.save(createFishSpecies("감성돔"));
+        String token = jwtUtil.generateToken(String.valueOf(user.getId()));
+
+        MockMultipartFile createImage = new MockMultipartFile(
+                "images", "catch.jpg", "image/jpeg", "test".getBytes());
+
+        String createResponse = mockMvc.perform(multipart("/api/v1/fishing_record")
+                        .file(createImage)
+                        .param("fishSpeciesId", String.valueOf(fish1.getId()))
+                        .param("caughtAt", "2026-07-07T18:30:00")
+                        .param("latitude", "34.516517")
+                        .param("longitude", "127.244330")
+                        .param("region1DeptName", "전남광주")
+                        .param("region2DeptName", "고흥군")
+                        .param("region3DeptName", "풍양면")
+                        .param("comment", "방파제 낚시")
+                        .param("visibility", "PUBLIC")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        Long recordId = Long.valueOf(
+                createResponse.replaceAll(".*\"id\"\\s*:\\s*(\\d+).*", "$1"));
+        FishingRecordImage existing =
+                fishingRecordImageRepository.findByFishingRecordIdOrderByDisplayOrderAsc(recordId)
+                        .get(0);
+
+        MockMultipartFile newImage = new MockMultipartFile(
+                "newImages", "new.jpg", "image/jpeg", "new-image".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/fishing_record/{recordId}", recordId)
+                        .file(newImage)
+                        .param("fishSpeciesId", String.valueOf(fish2.getId()))
+                        .param("caughtAt", "2026-08-01T09:00:00")
+                        .param("latitude", "35.000000")
+                        .param("longitude", "129.000000")
+                        .param("region1DeptName", "부산")
+                        .param("region2DeptName", "해운대구")
+                        .param("region3DeptName", "우동")
+                        .param("comment", "수정된 코멘트")
+                        .param("visibility", "PRIVATE")
+                        .param("imageIds", "", String.valueOf(existing.getId()))
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        })
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isNoContent());
+
+        FishingRecord updated = fishingRecordRepository.findById(recordId).orElseThrow();
+        Assertions.assertThat(updated.getFishSpecies().getId()).isEqualTo(fish2.getId());
+        Assertions.assertThat(updated.getComment()).isEqualTo("수정된 코멘트");
+        Assertions.assertThat(updated.getVisibility()).isEqualTo(FishingRecord.Visibility.PRIVATE);
+
+        List<FishingRecordImage> images =
+                fishingRecordImageRepository.findByFishingRecordIdOrderByDisplayOrderAsc(recordId);
+        Assertions.assertThat(images).hasSize(2);
+        Assertions.assertThat(images.get(1).getId()).isEqualTo(existing.getId());
     }
 
     private User createUser() {
