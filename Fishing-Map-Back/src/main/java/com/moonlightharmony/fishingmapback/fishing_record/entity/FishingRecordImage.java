@@ -45,4 +45,8 @@ public class FishingRecordImage extends BaseTimeEntity {
         this.storedFilename = storedFilename;
         this.displayOrder = displayOrder;
     }
+
+    public void changeDisplayOrder(int displayOrder) {
+        this.displayOrder = displayOrder;
+    }
 }

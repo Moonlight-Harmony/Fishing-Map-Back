@@ -59,6 +59,27 @@ class LocalFileStoreTest {
         Assertions.assertThat(result).isEmpty();
     }
 
+    @Test
+    void 파일_삭제_성공() throws Exception {
+        MockMultipartFile file = createFile("test.jpg");
+        List<String> stored = localFileStore.storeFiles(
+                List.of(file),
+                StorageLocation.FISHING_RECORD_IMAGE
+        );
+        Path storedPath = pathResolver.resolveStoragePath(
+                StorageLocation.FISHING_RECORD_IMAGE, stored.get(0));
+        Assertions.assertThat(Files.exists(storedPath)).isTrue();
+
+        localFileStore.deleteFile(stored.get(0), StorageLocation.FISHING_RECORD_IMAGE);
+
+        Assertions.assertThat(Files.exists(storedPath)).isFalse();
+    }
+
+    @Test
+    void 없는_파일_삭제는_예외없이_통과() {
+        localFileStore.deleteFile("missing.jpg", StorageLocation.FISHING_RECORD_IMAGE);
+    }
+
     private MockMultipartFile createFile(String filename) {
         return new MockMultipartFile("file", filename, "image/jpeg", "test".getBytes());
     }

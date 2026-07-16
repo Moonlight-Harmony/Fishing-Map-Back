@@ -66,6 +66,9 @@ public class FishingRecord extends BaseTimeEntity {
     @Column(nullable = false, length = 10)
     private Visibility visibility;
 
+    @Column
+    private LocalDateTime deletedAt;
+
     public enum Visibility {
         PUBLIC, PRIVATE
     }
@@ -93,6 +96,31 @@ public class FishingRecord extends BaseTimeEntity {
         this.comment = comment;
         this.visibility = visibility;
         this.caughtAt = caughtAt;
+    }
 
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public void update(
+            FishSpecies fishSpecies,
+            BigDecimal latitude,
+            BigDecimal longitude,
+            String region1DeptName,
+            String region2DeptName,
+            String region3DeptName,
+            String comment,
+            Visibility visibility,
+            LocalDateTime caughtAt
+    ) {
+        this.fishSpecies = fishSpecies;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.region1DeptName = region1DeptName;
+        this.region2DeptName = region2DeptName;
+        this.region3DeptName = region3DeptName;
+        this.comment = comment;
+        this.visibility = visibility;
+        this.caughtAt = caughtAt;
     }
 }
