@@ -92,6 +92,32 @@ public class FishingRecordService {
     }
 
     @Transactional(readOnly = true)
+    public List<FishingRecordMarkerResponse> findMarkersByRegion(
+            String region1DeptName,
+            String region2DeptName,
+            String region3DeptName
+    ) {
+        List<FishingRecord> records;
+
+        if (region3DeptName != null) {
+            records = fishingRecordRepository
+                .findByRegion1DeptNameAndRegion2DeptNameAndRegion3DeptNameAndDeletedAtIsNull(
+                        region1DeptName,
+                        region2DeptName,
+                        region3DeptName
+            );
+        } else if (region2DeptName != null) {
+            records = fishingRecordRepository
+                .findByRegion1DeptNameAndRegion2DeptNameAndDeletedAtIsNull(region1DeptName, region2DeptName);
+        } else {
+            records = fishingRecordRepository
+                .findByRegion1DeptNameAndDeletedAtIsNull(region1DeptName);
+        }
+
+        return records.stream().map(FishingRecordMarkerResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
     public FishingRecordSummaryResponse getSummary(Long recordId) {
         FishingRecord fishingRecord = fishingRecordRepository.findByIdAndDeletedAtIsNull(recordId)
                 .orElseThrow(() -> new AppException(ErrorCode.FISHING_RECORD_NOT_FOUND));
