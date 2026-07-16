@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,6 +45,7 @@ public class FishingRecordController {
     }
 
     @GetMapping("/markers")
+    @ResponseStatus(HttpStatus.OK)
     public List<FishingRecordMarkerResponse> findMarkers(
             @RequestParam String fishSpeciesName
     ) {
@@ -51,12 +53,24 @@ public class FishingRecordController {
     }
 
     @GetMapping("/{recordId}/summary")
+    @ResponseStatus(HttpStatus.OK)
     public FishingRecordSummaryResponse getSummary(@PathVariable Long recordId) {
         return fishingRecordService.getSummary(recordId);
     }
 
     @GetMapping("/{recordId}")
+    @ResponseStatus(HttpStatus.OK)
     public FishingRecordDetailResponse getDetail(@PathVariable Long recordId) {
         return fishingRecordService.getDetail(recordId);
+    }
+
+    @DeleteMapping("/{recordId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            @AuthenticationPrincipal String principal,
+            @PathVariable Long recordId
+    ) {
+        Long userId = Long.valueOf(principal);
+        fishingRecordService.delete(userId, recordId);
     }
 }

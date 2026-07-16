@@ -1,5 +1,6 @@
 package com.moonlightharmony.fishingmapback.fishing_record.controller;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -9,6 +10,7 @@ import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -201,6 +203,55 @@ class FishingRecordControllerTest {
                 .andExpect(jsonPath("$.imageUrls.length()").value(2))
                 .andExpect(jsonPath("$.imageUrls[0]").value(url1))
                 .andExpect(jsonPath("$.imageUrls[1]").value(url2));
+    }
+
+    @Test
+    @DisplayName("낚시기록_삭제_성공")
+    void delete_success() throws Exception {
+        User user = userRepository.save(createUser());
+        FishSpecies fish = fishSpeciesRepository.save(createFishSpecies("fish"));
+        FishingRecord record = fishingRecordRepository.save(
+                    createFishingRecord(user, fish, "34.132123", "127.244303"));
+        String token = jwtUtil.generateToken(String.valueOf(user.getId()));
+
+        mockMvc.perform(delete("/api/v1/fishing_record/{recordId}", record.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        FishingRecord deleted = fishingRecordRepository.findById(record.getId()).orElseThrow();
+        Assertions.assertThat(deleted.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("낚시기록_삭제_실패_존재하지_않음")
+    void delete_fail_not_found() throws Exception {
+        User user = userRepository.save(createUser());
+        String token = jwtUtil.generateToken(String.valueOf(user.getId()));
+
+        mockMvc.perform(delete("/api/v1/fishing_record/{recordId}", 999L)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("낚시기록을 찾을 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("낚시기록_삭제_실패_권한없음")
+    void delete_fail_forbidden() throws Exception {
+        User owner = userRepository.save(createUser());
+        User other = userRepository.save(User.builder()
+                .email("other@test.com")
+                .password("password")
+                .nickname("other")
+                .build());
+        FishSpecies fish = fishSpeciesRepository.save(createFishSpecies("fish"));
+        FishingRecord record = fishingRecordRepository.save(
+                createFishingRecord(owner, fish, "34.516517", "127.244330"));
+        String token = jwtUtil.generateToken(String.valueOf(other.getId()));
+
+        mockMvc.perform(delete("/api/v1/fishing_record/{recordId}", record.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("접근 권한이 없습니다."));
     }
 
     private User createUser() {

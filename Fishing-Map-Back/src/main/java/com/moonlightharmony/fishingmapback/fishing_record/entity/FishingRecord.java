@@ -97,4 +97,8 @@ public class FishingRecord extends BaseTimeEntity {
         this.visibility = visibility;
         this.caughtAt = caughtAt;
     }
+
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
 }

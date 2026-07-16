@@ -17,6 +17,8 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.moonlightharmony.fishingmapback.exception.AppException;
+import com.moonlightharmony.fishingmapback.exception.ErrorCode;
 import com.moonlightharmony.fishingmapback.fish_species.entity.FishSpecies;
 import com.moonlightharmony.fishingmapback.fish_species.repository.FishSpeciesRepository;
 import com.moonlightharmony.fishingmapback.fishing_record.dto.CreateFishingRecordRequest;
@@ -261,5 +263,62 @@ class FishingRecordServiceTest {
                 .build();
     }
 
-    
+    @Test
+    @DisplayName("낚시기록_삭제_성공")
+    void delete_success() {
+        User user = userRepository.save(createUser());
+        FishSpecies fish = fishSpeciesRepository.save(createFishSpecies("우럭"));
+        FishingRecord record = fishingRecordRepository.save(
+                createFishingRecord(user, fish, "34.516517", "127.244330"));
+        fishingRecordService.delete(user.getId(), record.getId());
+        FishingRecord deleted = fishingRecordRepository.findById(record.getId()).orElseThrow();
+        Assertions.assertThat(deleted.getDeletedAt()).isNotNull();
+        Assertions.assertThat(
+                fishingRecordRepository.findByIdAndDeletedAtIsNull(record.getId())
+        ).isEmpty();
+    }
+
+    @Test
+    @DisplayName("낚시기록_삭제_실패_존재하지_않음")
+    void delete_fail_not_found() {
+        User user = userRepository.save(createUser());
+        Assertions.assertThatThrownBy(() -> fishingRecordService.delete(user.getId(), 999L))
+                .isInstanceOf(AppException.class)
+                .extracting(e -> ((AppException) e).getErrorCode())
+                .isEqualTo(ErrorCode.FISHING_RECORD_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("낚시기록_삭제_실패_이미_삭제됨")
+    void delete_fail_already_deleted() {
+        User user = userRepository.save(createUser());
+        FishSpecies fish = fishSpeciesRepository.save(createFishSpecies("우럭"));
+        FishingRecord record = fishingRecordRepository.save(
+                createFishingRecord(user, fish, "34.516517", "127.244330"));
+        record.softDelete();
+        Assertions.assertThatThrownBy(
+                        () -> fishingRecordService.delete(user.getId(), record.getId()))
+                .isInstanceOf(AppException.class)
+                .extracting(e -> ((AppException) e).getErrorCode())
+                .isEqualTo(ErrorCode.FISHING_RECORD_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("낚시기록_삭제_실패_권한없음")
+    void delete_fail_forbidden() {
+        User owner = userRepository.save(createUser());
+        User other = userRepository.save(User.builder()
+                .email("other@test.com")
+                .password("password")
+                .nickname("other")
+                .build());
+        FishSpecies fish = fishSpeciesRepository.save(createFishSpecies("우럭"));
+        FishingRecord record = fishingRecordRepository.save(
+                createFishingRecord(owner, fish, "34.516517", "127.244330"));
+        Assertions.assertThatThrownBy(
+                        () -> fishingRecordService.delete(other.getId(), record.getId()))
+                .isInstanceOf(AppException.class)
+                .extracting(e -> ((AppException) e).getErrorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN);
+    }
 }

@@ -100,7 +100,7 @@ public class FishingRecordService {
 
     @Transactional(readOnly = true)
     public FishingRecordDetailResponse getDetail(Long recordId) {
-        FishingRecord fishingRecord = fishingRecordRepository.findById(recordId)
+        FishingRecord fishingRecord = fishingRecordRepository.findByIdAndDeletedAtIsNull(recordId)
                 .orElseThrow(() -> new AppException(ErrorCode.FISHING_RECORD_NOT_FOUND));
 
         List<FishingRecordImage> images = fishingRecordImageRepository.findByFishingRecordIdOrderByDisplayOrderAsc(recordId);
@@ -110,5 +110,20 @@ public class FishingRecordService {
                 .toList();
 
         return FishingRecordDetailResponse.from(fishingRecord, imageUrls);
+    }
+
+    @Transactional
+    public void delete(Long userId, Long recordId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        FishingRecord fishingRecord = fishingRecordRepository.findByIdAndDeletedAtIsNull(recordId)
+                .orElseThrow(() -> new AppException(ErrorCode.FISHING_RECORD_NOT_FOUND));
+
+        if (!fishingRecord.getUser().getId().equals(userId)) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+
+        fishingRecord.softDelete();
     }
 }
