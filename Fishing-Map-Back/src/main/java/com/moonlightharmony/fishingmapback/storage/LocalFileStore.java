@@ -60,5 +60,16 @@ public class LocalFileStore implements FileStore {
         return originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
     }
 
+    @Override
+    public void deleteFile(String storedFilename, StorageLocation location) {
+        if (storedFilename == null || storedFilename.isBlank()) {
+            return;
+        }
 
+        try {
+            Files.deleteIfExists(pathResolver.resolveStoragePath(location, storedFilename));
+        } catch (IOException e) {
+            throw new AppException(ErrorCode.FILE_STORE_FAILED);
+        }
+    }
 }
